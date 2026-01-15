@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Coding on Metal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+        h1, h2, h3, h4, .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        a {
+            color: #f472b6;
+            text-decoration: underline;
+            text-decoration-thickness: 1px;
+            text-underline-offset: 2px;
+            transition: color 0.2s;
+        }
+        a:hover {
+            color: #fbcfe8;
+        }
+        /* Custom scrollbar */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+        .section-content {
+            transition: max-height 0.5s ease-in-out, opacity 0.5s ease-in-out;
+            overflow: hidden;
+        }
+        .locked {
+            filter: grayscale(1);
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        /* Toast Notification */
+        #copy-toast {
+            transition: opacity 0.3s ease-in-out;
+        }
+        input, textarea, select {
+            background-color: #1e293b;
+            border-color: #334155;
+            color: white;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #f472b6;
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-pink-500 selection:text-white">
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full bg-slate-900/95 backdrop-blur-sm border-b border-slate-700 z-40">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <button onclick="toggleCheatsheet()" class="text-sm mono text-slate-300 hover:text-white border border-slate-600 px-3 py-1 rounded hover:bg-slate-800 transition">
+                    <i class="fas fa-terminal mr-2"></i>Commands
+                </button>
+                <span class="mono font-bold text-pink-500 text-lg hidden md:inline">VIBE_OS</span>
+            </div>
+            
+            <div class="flex items-center space-x-6">
+                <div class="hidden md:block text-xs text-slate-500 mono" id="progress-display">
+                    Progress: <span id="progress-percent">0%</span>
+                </div>
+                <button onclick="toggleGlossary()" class="text-sm mono text-slate-300 hover:text-white border border-slate-600 px-3 py-1 rounded hover:bg-slate-800 transition">
+                    <i class="fas fa-book mr-2"></i>Glossary
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <header class="pt-32 pb-12 px-4 max-w-4xl mx-auto text-center">
+        <h1 class="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-violet-500">
+            Vibe Coding on Metal
+        </h1>
+        <p class="text-xl text-slate-400 mb-8 max-w-2xl mx-auto">
+            A realist's guide to putting AI on a Raspberry Pi without losing your mind.
+        </p>
+        <div class="bg-slate-800 rounded-lg p-6 text-left border border-slate-700 mx-auto max-w-2xl text-sm">
+            <div class="flex items-start">
+                <i class="fas fa-exclamation-triangle text-yellow-500 mt-1 mr-3"></i>
+                <div>
+                    <h3 class="text-yellow-500 font-bold uppercase tracking-wider mb-1">Prerequisites</h3>
+                    <ul class="list-disc list-inside space-y-1 text-slate-300">
+                        <li><a href="https://www.raspberrypi.com/products/raspberry-pi-5/" target="_blank">Raspberry Pi 4/5</a> (Monitors are optional/discouraged)</li>
+                        <li>MicroSD card (Assume it will corrupt eventually)</li>
+                        <li>Windows PC (The control node)</li>
+                        <li>Patience (Required)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 pb-24 space-y-6" id="course-container">
+        <!-- Content injected by JS -->
+    </main>
+
+    <!-- Shared Overlay -->
+    <div id="modal-overlay" onclick="closeAllModals()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300"></div>
+
+    <!-- Right Side: Glossary Panel -->
+    <aside id="glossary-panel" class="fixed top-0 right-0 h-full w-full md:w-[480px] bg-slate-900 border-l border-slate-700 z-50 transform translate-x-full transition-transform duration-300 shadow-2xl flex flex-col">
+        <div class="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+            <h2 class="text-xl font-bold text-white mono"><i class="fas fa-book-open text-pink-500 mr-2"></i>System Glossary</h2>
+            <button onclick="toggleGlossary()" class="text-slate-400 hover:text-white p-2">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto custom-scroll flex-1 space-y-8" id="glossary-content"></div>
+    </aside>
+
+    <!-- Left Side: Cheatsheet Panel -->
+    <aside id="cheatsheet-panel" class="fixed top-0 left-0 h-full w-full md:w-[480px] bg-slate-900 border-r border-slate-700 z-50 transform -translate-x-full transition-transform duration-300 shadow-2xl flex flex-col">
+        <div class="p-6 border-b border-slate-800 bg-slate-900">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-white mono"><i class="fas fa-terminal text-green-500 mr-2"></i>Command Deck</h2>
+                <button onclick="toggleCheatsheet()" class="text-slate-400 hover:text-white p-2">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="relative">
+                <i class="fas fa-search absolute left-3 top-3 text-slate-500"></i>
+                <input type="text" id="command-search" placeholder="Find command (e.g., 'move file')" 
+                       class="w-full bg-slate-800 border border-slate-700 rounded p-2 pl-10 text-slate-200 focus:outline-none focus:border-green-500 mono text-sm"
+                       onkeyup="filterCheatsheet()">
+            </div>
+        </div>
+        <div class="p-6 overflow-y-auto custom-scroll flex-1 space-y-6" id="cheatsheet-content">
+            <!-- Commands injected here -->
+        </div>
+    </aside>
+
+    <!-- Copy Toast -->
+    <div id="copy-toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-green-900/90 text-green-200 px-4 py-2 rounded-lg border border-green-500/50 opacity-0 pointer-events-none z-[60] text-sm mono">
+        <i class="fas fa-check mr-2"></i>Copied to clipboard
+    </div>
+
+    <footer class="text-center py-8 text-slate-600 text-sm border-t border-slate-800">
+        <p>Generated for the impatient. <br> Hardware fails. Code rots. Keep backups.</p>
+        <button onclick="resetProgress()" class="mt-4 text-xs text-red-900 hover:text-red-500 underline">Reset Progress</button>
+    </footer>
+
+    <script>
+        // --- Data: Modules ---
+        const modules = [
+            {
+                id: "setup",
+                title: "01. The Headless Setup",
+                color: "pink",
+                icon: "fa-microchip",
+                desc: "Flashing the OS without ever seeing a desktop.",
+                content: `
+                    <div class="space-y-4 text-slate-300">
+                        <p class="italic text-slate-400">Because hooking up a monitor is admitting defeat.</p>
+                        
+                        <div class="bg-pink-900/20 border border-pink-500/30 p-4 rounded mb-4">
+                            <strong class="text-pink-400 block mb-2 text-xs uppercase">Step 0: Get the Software</strong>
+                            <a href="https://www.raspberrypi.com/software/" target="_blank" class="flex items-center justify-between bg-pink-600 hover:bg-pink-500 text-white p-3 rounded transition-colors no-underline">
+                                <span class="font-bold">Download Raspberry Pi Imager</span>
+                                <i class="fas fa-download"></i>
+                            </a>
+                        </div>
+
+                        <ol class="list-decimal list-inside space-y-3 bg-slate-800/50 p-4 rounded border border-slate-700">
+                            <li>Install the Imager you just downloaded.</li>
+                            <li>Select <strong>Raspberry Pi OS Lite (64-bit)</strong>. <span class="text-red-400">Do not</span> install the Desktop version; it wastes RAM.</li>
+                            <li><strong>The Critical Step:</strong> Click the gear icon (or Ctrl+Shift+X). Set hostname (<code>vibepi</code>), enable SSH (password auth), and set WiFi credentials.</li>
+                            <li class="pt-2">
+                                <a href="https://www.youtube.com/watch?v=ntaXWS8Lk34" target="_blank" class="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-2 border border-blue-900/50 bg-blue-900/10 p-2 rounded">
+                                    <i class="fab fa-youtube text-red-500"></i>
+                                    <span>Stuck on steps 2 & 3? Watch this video guide.</span>
+                                </a>
+                            </li>
+                            <li>Write. If verification fails, the card is trash.</li>
+                        </ol>
+                        <p class="text-sm">Power it on. Wait 2 minutes. Proceed.</p>
+                    </div>
+                `
+            },
+            {
+                id: "connect",
+                title: "02. The Tether (WSL)",
+                color: "violet",
+                icon: "fa-network-wired",
+                desc: "Connecting to the machine via Windows Subsystem for Linux.",
+                content: `
+                    <div class="space-y-4 text-slate-300">
+                        <p>Windows terminals are historically bad. We use WSL to get a real kernel.</p>
+                        <div class="bg-black p-4 rounded border border-slate-700 mono text-sm">
+                            <p class="text-slate-500"># On Windows PowerShell (Admin)</p>
+                            <p class="text-green-400">wsl --install</p>
+                            <p class="text-slate-500 mt-2"># Reboot, open Ubuntu, then connect:</p>
+                            <p class="text-green-400">ssh pi@vibepi.local</p>
+                        </div>
+                        <div class="mt-4 p-4 bg-yellow-900/10 border-l-2 border-yellow-500">
+                            <strong class="text-yellow-500 block mb-1 text-xs uppercase">Exercise: The Locksmith</strong>
+                            <p class="text-sm">Stop typing passwords. Generate a key on WSL: <code>ssh-keygen -t ed25519</code>. Send it to the Pi: <code>ssh-copy-id pi@vibepi.local</code>.</p>
+                        </div>
+                         <p class="text-xs text-slate-500 mt-2">New to keys? Read the <a href="https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys-on-ubuntu-20-04" target="_blank">DigitalOcean Guide</a>.</p>
+                    </div>
+                `
+            },
+            {
+                id: "shell",
+                title: "03. The System (Shell)",
+                color: "blue",
+                icon: "fa-terminal",
+                desc: "Managing packages and automating the mess.",
+                content: `
+                    <div class="space-y-4 text-slate-300">
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div class="bg-slate-800 p-4 rounded border border-slate-700">
+                                <h4 class="font-bold text-white mb-2">Package Management</h4>
+                                <code class="block text-green-400 text-xs mb-1">sudo apt update && sudo apt upgrade</code>
+                                <p class="text-xs text-slate-400">Runs the update cycle. Do this often.</p>
+                            </div>
+                            <div class="bg-slate-800 p-4 rounded border border-slate-700">
+                                <h4 class="font-bold text-white mb-2">Permissions</h4>
+                                <code class="block text-green-400 text-xs mb-1">chmod +x script.sh</code>
+                                <p class="text-xs text-slate-400">Makes a file executable. See <a href="https://chmod-calculator.com/" target="_blank">chmod calculator</a>.</p>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <strong class="text-blue-400 block mb-2 text-xs uppercase">Exercise: The Organizer</strong>
+                            <p class="text-sm mb-2">Create a script <code>organizer.sh</code> to move <code>.jpg</code> and <code>.txt</code> files into separate folders. Test it on a dummy directory.</p>
+                            <a href="https://devhints.io/bash" target="_blank" class="text-xs">Bash Cheatsheet</a>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: "toolbox",
+                title: "03b. The Toolbox",
+                color: "indigo",
+                icon: "fa-tools",
+                desc: "Essential CLI utilities you didn't know you needed.",
+                content: `
+                     <div class="space-y-4 text-slate-300">
+                        <p>Linux is bare bones. Install these immediately.</p>
+                        <div class="bg-black p-3 rounded mono text-sm text-green-400">
+                            sudo apt install tree tldr htop ncdu
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div class="bg-slate-800 p-3 rounded border border-slate-700">
+                                <strong class="text-indigo-400 font-mono">tree</strong>
+                                <p class="text-xs text-slate-400 mt-1">Displays directories as trees. Great for explaining file structure to LLMs.</p>
+                            </div>
+                            <div class="bg-slate-800 p-3 rounded border border-slate-700">
+                                <strong class="text-indigo-400 font-mono">tldr</strong>
+                                <p class="text-xs text-slate-400 mt-1">"Too Long; Didn't Read". Simplified man pages. <a href="https://tldr.sh/" target="_blank">Docs</a>.</p>
+                            </div>
+                            <div class="bg-slate-800 p-3 rounded border border-slate-700">
+                                <strong class="text-indigo-400 font-mono">htop</strong>
+                                <p class="text-xs text-slate-400 mt-1">Visual process viewer. Shows you exactly what is eating your RAM.</p>
+                            </div>
+                            <div class="bg-slate-800 p-3 rounded border border-slate-700">
+                                <strong class="text-indigo-400 font-mono">ncdu</strong>
+                                <p class="text-xs text-slate-400 mt-1">NCurses Disk Usage. Find large files visually and delete them.</p>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: "docker",
+                title: "04. The Container (Docker)",
+                color: "cyan",
+                icon: "fa-box",
+                desc: "Avoiding dependency hell by isolating software.",
+                content: `
+                    <div class="space-y-4 text-slate-300">
+                        <p>Software dependencies are fragile. Docker creates immutable boxes for your apps.</p>
+                        <code class="block bg-black p-3 rounded text-green-400 text-xs">curl -fsSL https://get.docker.com | sh</code>
+                        
+                        <h4 class="font-bold text-white mt-6 mb-2">Anatomy of a Docker Compose</h4>
+                        <p class="text-sm text-slate-400 mb-2">Create a <code>docker-compose.yml</code> file. This defines your stack.</p>
+                        
+                        <div class="bg-black p-4 rounded border border-slate-700 relative group">
+                            <button onclick="copyToClipboard(this.nextElementSibling.innerText)" class="absolute top-2 right-2 text-slate-500 hover:text-white"><i class="fas fa-copy"></i></button>
+                            <pre class="text-xs overflow-x-auto mono text-slate-300 leading-relaxed"><span class="text-pink-500">services:</span>
+  <span class="text-cyan-400">filebrowser:</span>                  <span class="text-slate-500"># Name of the service</span>
+    <span class="text-purple-400">image:</span> filebrowser/filebrowser:s6 <span class="text-slate-500"># The software blueprint</span>
+    <span class="text-purple-400">container_name:</span> filebrowser
+    <span class="text-purple-400">restart:</span> unless-stopped       <span class="text-slate-500"># Auto-reboot if it crashes</span>
+    <span class="text-purple-400">ports:</span>
+      - <span class="text-yellow-300">"8080:80"</span>                 <span class="text-slate-500"># Host Port : Container Port</span>
+    <span class="text-purple-400">volumes:</span>
+      - <span class="text-yellow-300">"$HOME/data:/srv"</span>         <span class="text-slate-500"># Map Pi folder to Container folder</span>
+      - <span class="text-yellow-300">"./db:/database"</span>          <span class="text-slate-500"># Persist settings</span></pre>
+                        </div>
+                        <p class="text-xs mt-2 text-slate-500">Read the <a href="https://docs.docker.com/compose/" target="_blank">Official Compose Specification</a>.</p>
+
+                        <div class="bg-slate-800 p-4 rounded border border-slate-700 mt-4">
+                            <strong class="text-cyan-400 block mb-2 text-xs uppercase">Exercise: The File Server</strong>
+                            <p class="text-sm mb-3">Save the above as <code>docker-compose.yml</code> and run <code>docker compose up -d</code>.</p>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: "ai",
+                title: "05. The Vibe (AI Workflow)",
+                color: "emerald",
+                icon: "fa-robot",
+                desc: "Setting up the tools to write code for you.",
+                content: `
+                    <div class="space-y-4 text-slate-300">
+                        <p>The goal is to write as little syntax as possible. We use CLI tools.</p>
+                        <ul class="list-disc list-inside text-sm space-y-2">
+                            <li>Install Node via <a href="https://github.com/nvm-sh/nvm" target="_blank">nvm</a>.</li>
+                            <li>Install Claude Code: <code>npm install -g @anthropic-ai/claude-code</code></li>
+                        </ul>
+                        <div class="p-4 bg-red-900/20 border border-red-500/50 rounded mt-2">
+                            <strong class="text-red-400 block mb-1 text-xs uppercase"><i class="fas fa-shield-alt mr-2"></i>Security Protocol</strong>
+                            <p class="text-sm">Create a <code>.env</code> file. Put your API keys there. Add <code>.env</code> to your <code>.gitignore</code>. Never commit secrets.</p>
+                        </div>
+                        <p class="text-xs mt-2">Get keys: <a href="https://console.anthropic.com/" target="_blank">Anthropic Console</a> or <a href="https://aistudio.google.com/" target="_blank">Google AI Studio</a>.</p>
+                    </div>
+                `
+            },
+            {
+                id: "git",
+                title: "06. The Safety Net (Git)",
+                color: "orange",
+                icon: "fa-code-branch",
+                desc: "Version control for when the AI hallucinates bad code.",
+                content: `
+                    <div class="space-y-4 text-slate-300">
+                        <p>You will break it. Git lets you undo.</p>
+                        <div class="grid grid-cols-2 gap-2 text-xs mono">
+                            <div class="bg-slate-800 p-2 rounded"><span class="text-orange-400">git init</span><br>Start tracking.</div>
+                            <div class="bg-slate-800 p-2 rounded"><span class="text-orange-400">git add .</span><br>Stage changes.</div>
+                            <div class="bg-slate-800 p-2 rounded"><span class="text-orange-400">git commit -m "..."</span><br>Save snapshot.</div>
+                            <div class="bg-slate-800 p-2 rounded"><span class="text-orange-400">git checkout .</span><br>Nuke changes (Undo).</div>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-2">Mess up bad? Read <a href="https://ohshitgit.com/" target="_blank">Oh Shit, Git!</a>.</p>
+                    </div>
+                `
+            },
+            {
+                id: "project",
+                title: "07. Project Generator",
+                color: "pink",
+                icon: "fa-rocket",
+                desc: "Design your final project and generate the prompt stack.",
+                content: `
+                    <div class="space-y-6 text-slate-300">
+                        <p class="text-sm">Don't start coding yet. Use this tool to generate the <strong>Prompt Stack</strong>. These prompts are engineered to force the AI to plan before it builds.</p>
+                        
+                        <!-- Form -->
+                        <div class="bg-slate-800 p-6 rounded-lg border border-slate-700 space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Project Title</label>
+                                <input type="text" id="p-title" class="w-full p-2 rounded text-sm bg-slate-900 border border-slate-600 focus:border-pink-500" placeholder="e.g., Pi-Hole Dashboard">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">High Level Description</label>
+                                <textarea id="p-desc" class="w-full p-2 rounded text-sm bg-slate-900 border border-slate-600 focus:border-pink-500 h-20" placeholder="A web dashboard to monitor network stats..."></textarea>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Core Features (Add up to 5)</label>
+                                <div id="features-container" class="space-y-2">
+                                    <input type="text" class="feature-input w-full p-2 rounded text-sm bg-slate-900 border border-slate-600" placeholder="Feature 1">
+                                    <input type="text" class="feature-input w-full p-2 rounded text-sm bg-slate-900 border border-slate-600" placeholder="Feature 2">
+                                    <input type="text" class="feature-input w-full p-2 rounded text-sm bg-slate-900 border border-slate-600" placeholder="Feature 3">
+                                </div>
+                                <button onclick="addFeatureInput()" class="text-xs text-pink-500 hover:text-white mt-2"><i class="fas fa-plus mr-1"></i> Add Feature</button>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Style / Inspiration</label>
+                                <input type="text" id="p-style" class="w-full p-2 rounded text-sm bg-slate-900 border border-slate-600 focus:border-pink-500" placeholder="e.g., Cyberpunk, Minimalist, Stripe-like">
+                            </div>
+
+                            <button onclick="generatePrompts()" class="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-3 rounded shadow-lg transition-all transform hover:scale-[1.02]">
+                                <i class="fas fa-magic mr-2"></i>Generate Prompt Stack
+                            </button>
+                        </div>
+
+                        <!-- Output Area (Hidden initially) -->
+                        <div id="prompt-output" class="hidden space-y-6 animate-fade-in">
+                            <h3 class="text-xl font-bold text-white border-b border-slate-700 pb-2">Generated Stack</h3>
+                            
+                            <!-- Tabs for prompts -->
+                            <div class="grid grid-cols-1 gap-6">
+                                
+                                <!-- Pitch Prompt -->
+                                <div class="bg-slate-900 rounded border border-slate-800">
+                                    <div class="bg-slate-800 px-4 py-2 text-xs font-bold uppercase text-slate-400 flex justify-between">
+                                        <span>1. The Pitch & Concept</span>
+                                        <button onclick="copyPrompt('out-pitch')" class="hover:text-white"><i class="fas fa-copy"></i></button>
+                                    </div>
+                                    <pre id="out-pitch" class="p-4 text-xs text-green-400 whitespace-pre-wrap font-mono"></pre>
+                                </div>
+
+                                <!-- PRD Prompt -->
+                                <div class="bg-slate-900 rounded border border-slate-800">
+                                    <div class="bg-slate-800 px-4 py-2 text-xs font-bold uppercase text-slate-400 flex justify-between">
+                                        <span>2. The PRD (Specs)</span>
+                                        <button onclick="copyPrompt('out-prd')" class="hover:text-white"><i class="fas fa-copy"></i></button>
+                                    </div>
+                                    <pre id="out-prd" class="p-4 text-xs text-blue-400 whitespace-pre-wrap font-mono"></pre>
+                                </div>
+
+                                <!-- Plan Prompt -->
+                                <div class="bg-slate-900 rounded border border-slate-800">
+                                    <div class="bg-slate-800 px-4 py-2 text-xs font-bold uppercase text-slate-400 flex justify-between">
+                                        <span>3. The Master Plan</span>
+                                        <button onclick="copyPrompt('out-plan')" class="hover:text-white"><i class="fas fa-copy"></i></button>
+                                    </div>
+                                    <pre id="out-plan" class="p-4 text-xs text-orange-400 whitespace-pre-wrap font-mono"></pre>
+                                </div>
+
+                                <!-- AI Context -->
+                                <div class="bg-slate-900 rounded border border-slate-800">
+                                    <div class="bg-slate-800 px-4 py-2 text-xs font-bold uppercase text-slate-400 flex justify-between">
+                                        <span>4. AI Context (Save as AI.md)</span>
+                                        <button onclick="copyPrompt('out-ai')" class="hover:text-white"><i class="fas fa-copy"></i></button>
+                                    </div>
+                                    <pre id="out-ai" class="p-4 text-xs text-slate-300 whitespace-pre-wrap font-mono"></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `
+            }
+        ];
+
+        // --- Data: Glossary ---
+        const glossaryData = {
+            "setup": [
+                { term: "Headless", def: "Operating a computer without a monitor, keyboard, or mouse. It relies entirely on network protocols. If the network config fails, the machine is effectively a brick until you physically intervene." },
+                { term: "Image / ISO", def: "A byte-for-byte copy of an operating system's filesystem. When you 'flash' an image, you aren't just copying files; you are overwriting the raw sectors of the storage medium. Corruption here is fatal." },
+                { term: "SSH (Secure Shell)", def: "A cryptographic network protocol for operating network services securely over an unsecured network. It is the standard for remote administration. Losing your private key is equivalent to losing the keys to your house." }
+            ],
+            "connect": [
+                { term: "WSL", def: "Windows Subsystem for Linux. A compatibility layer that lets you run Linux binary executables natively on Windows. It's Microsoft admitting that for development, Linux won." },
+                { term: "Fingerprint", def: "A short sequence of bytes used to authenticate a public key. When SSH asks you to accept a fingerprint, it's asking you to trust that the server you are talking to is actually your Pi, and not an attacker intercepting the connection." },
+                { term: "Latency", def: "The time delay between cause and effect. In vibe coding, this is the annoyance interval between hitting 'Enter' on your PC and seeing the character appear on the Pi." }
+            ],
+            "shell": [
+                { term: "sudo", def: "'SuperUser DO'. It grants root privileges for a single command. It assumes you know exactly what you are doing. If you type `sudo rm -rf /`, the system will obey you and destroy itself without hesitation." },
+                { term: "apt", def: "Advanced Package Tool. The package manager for Debian systems. It resolves complex dependency trees so you don't have to manually compile software. When it breaks, it is usually because you added a sketch third-party repository." },
+                { term: "Shell Script", def: "A file containing a series of commands executed by the command-line interpreter. It is the primary way to automate boring tasks. If you do a task more than twice, script it." }
+            ],
+            "toolbox": [
+                { term: "Man Pages", def: "Manual pages. The built-in documentation for Linux. Often verbose and dry. Accessed via `man <command>`." },
+                { term: "Tree", def: "A command that prints a depth-indented listing of files. Invaluable when trying to explain your project structure to an LLM." },
+                { term: "Process", def: "An instance of a computer program that is being executed. `htop` lets you see them and kill them when they misbehave." }
+            ],
+            "docker": [
+                { term: "Container", def: "A lightweight, standalone, executable package of software that includes everything needed to run it. Unlike a Virtual Machine, it shares the host's kernel, making it faster but slightly less secure." },
+                { term: "Dependency Hell", def: "A frustration state where Software A requires Library V1.0, but Software B requires Library V2.0, and they cannot coexist. Docker solves this by isolating them." },
+                { term: "Port Mapping", def: "The act of forwarding a network port from the container (inside the box) to the host machine (outside the box). Without this, your container is a black hole—nothing gets in or out." },
+                { term: "Volume", def: "A mechanism for persisting data generated by and used by Docker containers. Without volumes, your data dies when the container dies." }
+            ],
+            "ai": [
+                { term: "LLM", def: "Large Language Model. A probabilistic engine that predicts the next token in a sequence. It does not 'know' code; it has seen a lot of code and guesses what usually comes next. Trust, but verify." },
+                { term: "Hallucination", def: "When an AI confidently asserts a fact or code syntax that is objectively false. In coding, this usually results in 'Module Not Found' errors or subtle logic bugs." },
+                { term: ".env", def: "A standard configuration file pattern for storing secrets (API keys, passwords). This file should never be committed to version control. If you upload this to GitHub, bots will steal your credits within minutes." }
+            ],
+            "git": [
+                { term: "Commit", def: "A snapshot of your project's files at a specific point in time. It is a save point. If you don't commit often, your save points are too far apart to be useful when you crash." },
+                { term: "Repository (Repo)", def: "The database where Git stores all the versions of your project. It lives in the hidden `.git` folder. Delete that folder, and you lose history." }
+            ]
+        };
+
+        // --- Data: Commands ---
+        const commandData = [
+            { cmd: "ls -lah", desc: "List everything. Hidden files (starting with .) are where the secrets live.", cat: "File System" },
+            { cmd: "cd ..", desc: "Go back one directory level. Retreat.", cat: "File System" },
+            { cmd: "cd ~", desc: "Go home.", cat: "File System" },
+            { cmd: "mkdir foldername", desc: "Create a new directory.", cat: "File System" },
+            { cmd: "cp -r source dest", desc: "Copy folder. Recursive, because files have baggage.", cat: "File System" },
+            { cmd: "mv source dest", desc: "Move or Rename. Linux doesn't distinguish between the two.", cat: "File System" },
+            { cmd: "touch filename", desc: "Create an empty file or update its timestamp.", cat: "File System" },
+            { cmd: "cat filename", desc: "Dump file contents to screen. Messy for large files.", cat: "File System" },
+            { cmd: "nano filename", desc: "Edit text. Ctrl+O to save, Ctrl+X to escape.", cat: "Editor" },
+            { cmd: "tree -L 2", desc: "Visualize folder structure. Great for AI context.", cat: "File System" },
+            { cmd: "tldr command", desc: "Simplified manual. For when you can't read.", cat: "Help" },
+            { cmd: "sudo !!", desc: "Run the last command with sudo because you forgot.", cat: "System" },
+            { cmd: "sudo apt update", desc: "Refresh the list of available software.", cat: "System" },
+            { cmd: "sudo apt install pkg", desc: "Install a package.", cat: "System" },
+            { cmd: "htop", desc: "Task manager. Look at all that RAM you aren't using.", cat: "System" },
+            { cmd: "ncdu", desc: "Disk usage analyzer. Find what's eating your SD card.", cat: "System" },
+            { cmd: "ssh user@host", desc: "Log in to a remote machine.", cat: "Network" },
+            { cmd: "source .bashrc", desc: "Reload configuration without rebooting.", cat: "System" },
+            { cmd: "man command", desc: "Read the manual. It's dry, but correct.", cat: "Help" },
+            { cmd: "docker ps", desc: "See what containers are actually running.", cat: "Docker" },
+            { cmd: "docker compose up -d", desc: "Start the stack in the background (detached).", cat: "Docker" },
+            { cmd: "docker compose down", desc: "Stop and remove the stack.", cat: "Docker" }
+        ];
+
+        // --- Logic: Core ---
+        
+        let currentStep = 0;
+        
+        function init() {
+            const saved = localStorage.getItem('vibe_coding_progress');
+            if (saved) {
+                currentStep = parseInt(saved, 10);
+            }
+            renderCourse();
+            updateProgress();
+            renderCheatsheet(); // Init cheatsheet
+        }
+
+        function saveProgress() {
+            localStorage.setItem('vibe_coding_progress', currentStep);
+            updateProgress();
+        }
+
+        function resetProgress() {
+            if(confirm("Are you sure? This will lock all modules.")) {
+                currentStep = 0;
+                saveProgress();
+                renderCourse();
+            }
+        }
+
+        function updateProgress() {
+            const percent = Math.round((currentStep / modules.length) * 100);
+            document.getElementById('progress-percent').innerText = `${percent}%`;
+        }
+
+        function renderCourse() {
+            const container = document.getElementById('course-container');
+            container.innerHTML = '';
+
+            modules.forEach((mod, index) => {
+                const isLocked = index > currentStep;
+                const isCompleted = index < currentStep;
+                const isActive = index === currentStep;
+                
+                let stateClasses = "border-slate-800 bg-slate-900/50";
+                let iconColor = `text-${mod.color}-500`;
+                let contentHeight = "max-h-0 opacity-0";
+                let buttonText = "Mark Complete";
+                let buttonClass = `border-${mod.color}-500 text-${mod.color}-500 hover:bg-${mod.color}-500 hover:text-white`;
+                
+                if (isLocked) {
+                    stateClasses = "locked border-slate-800 bg-slate-900";
+                    iconColor = "text-slate-600";
+                } else if (isActive) {
+                    stateClasses = `border-${mod.color}-500 bg-slate-900 shadow-[0_0_15px_rgba(0,0,0,0.5)]`;
+                    contentHeight = "max-h-[2000px] opacity-100";
+                } else if (isCompleted) {
+                    stateClasses = "border-green-900 bg-slate-900/30";
+                    iconColor = "text-green-500";
+                    buttonText = "Completed";
+                    buttonClass = "border-green-600 text-green-500 cursor-default";
+                }
+
+                const html = `
+                    <section class="rounded-xl border ${stateClasses} transition-all duration-300 relative overflow-hidden group">
+                        <div class="p-6 cursor-pointer flex items-center justify-between" onclick="toggleSection(${index})">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
+                                    ${isCompleted ? '<i class="fas fa-check text-green-500"></i>' : 
+                                      isLocked ? '<i class="fas fa-lock text-slate-600"></i>' : 
+                                      `<i class="fas ${mod.icon} ${iconColor}"></i>`}
+                                </div>
+                                <div>
+                                    <h2 class="text-xl font-bold text-white group-hover:text-${mod.color}-400 transition-colors">${mod.title}</h2>
+                                    <p class="text-sm text-slate-500">${mod.desc}</p>
+                                </div>
+                            </div>
+                            <i class="fas fa-chevron-down text-slate-600 transform transition-transform duration-300 ${isActive ? 'rotate-180' : ''} ${isLocked ? 'hidden' : ''}"></i>
+                        </div>
+                        <div class="section-content ${contentHeight}" id="content-${index}">
+                            <div class="px-6 pb-6 pt-0 border-t border-slate-800/50 mt-2">
+                                <div class="py-4">
+                                    ${mod.content}
+                                </div>
+                                ${!isCompleted && !isLocked ? `
+                                    <div class="flex justify-end pt-4 border-t border-slate-800/50">
+                                        <button onclick="completeSection(${index})" class="text-sm mono border px-4 py-2 rounded transition-all ${buttonClass}">
+                                            <i class="fas fa-check-circle mr-2"></i>Mark Complete & Unlock Next
+                                        </button>
+                                    </div>
+                                ` : ''}
+                                ${isCompleted ? `
+                                    <div class="flex justify-end pt-2">
+                                        <span class="text-xs text-green-500 mono"><i class="fas fa-check mr-1"></i> Module Completed</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </section>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        function toggleSection(index) {
+            if (index > currentStep) return;
+            const content = document.getElementById(`content-${index}`);
+            const isClosed = content.classList.contains('max-h-0');
+            if (isClosed) {
+                content.classList.remove('max-h-0', 'opacity-0');
+                content.classList.add('max-h-[2000px]', 'opacity-100');
+            } else {
+                content.classList.add('max-h-0', 'opacity-0');
+                content.classList.remove('max-h-[2000px]', 'opacity-100');
+            }
+        }
+
+        function completeSection(index) {
+            if (index === currentStep) {
+                currentStep++;
+                saveProgress();
+                renderCourse();
+            }
+        }
+
+        // --- Logic: Project Generator ---
+        function addFeatureInput() {
+            const container = document.getElementById('features-container');
+            const count = container.children.length;
+            if(count >= 5) {
+                alert("Scope Creep Detected. Stick to 5 core features.");
+                return;
+            }
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'feature-input w-full p-2 rounded text-sm bg-slate-900 border border-slate-600 mt-2';
+            input.placeholder = `Feature ${count + 1}`;
+            container.appendChild(input);
+        }
+
+        function generatePrompts() {
+            const title = document.getElementById('p-title').value || "Untitled Project";
+            const desc = document.getElementById('p-desc').value || "No description provided.";
+            const style = document.getElementById('p-style').value || "Standard";
+            
+            const featureInputs = document.querySelectorAll('.feature-input');
+            const features = Array.from(featureInputs).map(i => i.value).filter(v => v !== "").join(", ");
+
+            // Templates
+            const tplPitch = `Role: Product Manager & Founder
+Task: Create a High-Level Pitch for a project named "${title}".
+Context: ${desc}
+Core Features: ${features}
+Style/Vibe: ${style}
+
+CRITICAL INSTRUCTION:
+Before generating the pitch, ask me 3 clarifying questions about the target audience, monetization (if any), and user flow. For each question, provide 3 multiple-choice options (A, B, C) with your recommendation and reasoning for one of them. Wait for my answer.
+
+Once answered, generate:
+1. One-line "High Concept"
+2. The "Why Now"
+3. Core Value Proposition`;
+
+            const tplPRD = `Role: Senior Technical Product Manager
+Task: Write a Product Requirements Document (PRD) for "${title}".
+Context: This project will run on a Raspberry Pi using Docker.
+Features: ${features}
+
+CRITICAL INSTRUCTION:
+Do not write the PRD yet. First, identify 3 potential technical bottlenecks or edge cases specific to the Raspberry Pi hardware (e.g., SD card limits, RAM, network latency). For each, propose 2 solutions and ask which I prefer.
+
+Once answered, generate a PRD containing:
+1. User Stories
+2. Functional Requirements
+3. Technical Constraints
+4. "Nice to Have" vs "MVP" cutline`;
+
+            const tplPlan = `Role: Engineering Manager
+Task: Create an Implementation Plan & Tasks file for "${title}".
+Context: Building on Raspberry Pi, Docker, Nginx, HTML/JS (No complex build steps).
+Features: ${features}
+
+CRITICAL INSTRUCTION:
+Before planning, look at the features and ask me to prioritize the single most risky feature. Provide your analysis of why one might be riskier than others.
+
+Once agreed, generate:
+1. A step-by-step "Master Plan" (Phases 1-3)
+2. The content for a \`tasks.md\` file that I can use to track progress.`;
+
+            const tplAI = `Role: System Architect
+Task: Generate an AI Context File (AI.md).
+Project: ${title}
+Description: ${desc}
+Stack: Docker (Compose), Nginx, Alpine Linux, Raspberry Pi.
+Style: ${style}
+
+Output:
+Generate a markdown file content named \`AI.md\`.
+This file should explain the project to future AI sessions. It must include:
+- Project Goal
+- Tech Stack Constraints (No npm, no build steps, lightweight)
+- Directory Structure
+- The "Vibe" (Coding style guidelines)
+`;
+
+            document.getElementById('out-pitch').innerText = tplPitch;
+            document.getElementById('out-prd').innerText = tplPRD;
+            document.getElementById('out-plan').innerText = tplPlan;
+            document.getElementById('out-ai').innerText = tplAI;
+
+            document.getElementById('prompt-output').classList.remove('hidden');
+        }
+
+        function copyPrompt(id) {
+            const text = document.getElementById(id).innerText;
+            copyToClipboard(text);
+        }
+
+        // --- UI: Modals ---
+        function toggleGlossary() {
+            const panel = document.getElementById('glossary-panel');
+            const overlay = document.getElementById('modal-overlay');
+            const content = document.getElementById('glossary-content');
+            
+            const isOpen = !panel.classList.contains('translate-x-full');
+            
+            if (isOpen) {
+                closeAllModals();
+            } else {
+                closeAllModals();
+                content.innerHTML = renderGlossaryContent();
+                panel.classList.remove('translate-x-full');
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.add('opacity-100'), 10);
+            }
+        }
+
+        function toggleCheatsheet() {
+            const panel = document.getElementById('cheatsheet-panel');
+            const overlay = document.getElementById('modal-overlay');
+            
+            const isOpen = !panel.classList.contains('-translate-x-full');
+            
+            if (isOpen) {
+                closeAllModals();
+            } else {
+                closeAllModals();
+                renderCheatsheet();
+                panel.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.add('opacity-100'), 10);
+            }
+        }
+
+        function closeAllModals() {
+            const glossPanel = document.getElementById('glossary-panel');
+            const cheatPanel = document.getElementById('cheatsheet-panel');
+            const overlay = document.getElementById('modal-overlay');
+
+            glossPanel.classList.add('translate-x-full');
+            cheatPanel.classList.add('-translate-x-full');
+            
+            overlay.classList.remove('opacity-100');
+            setTimeout(() => overlay.classList.add('hidden'), 300);
+        }
+
+        // --- Logic: Glossary ---
+        function renderGlossaryContent() {
+            let html = '';
+            for (const [key, terms] of Object.entries(glossaryData)) {
+                // Handle toolbox mapping since it wasn't in original keys perfectly
+                const mod = modules.find(m => m.id === key);
+                const modTitle = mod ? mod.title : key.toUpperCase();
+                
+                html += `
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 border-b border-slate-800 pb-2">${modTitle}</h4>
+                        <div class="space-y-6">
+                            ${terms.map(t => `
+                                <div>
+                                    <span class="text-pink-400 font-mono font-bold text-sm block mb-1">${t.term}</span>
+                                    <p class="text-slate-400 text-sm leading-relaxed">${t.def}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            return html;
+        }
+
+        // --- Logic: Cheatsheet ---
+        function renderCheatsheet(filterText = "") {
+            const container = document.getElementById('cheatsheet-content');
+            const lowerFilter = filterText.toLowerCase();
+            
+            const filtered = commandData.filter(item => 
+                item.cmd.toLowerCase().includes(lowerFilter) || 
+                item.desc.toLowerCase().includes(lowerFilter) ||
+                item.cat.toLowerCase().includes(lowerFilter)
+            );
+
+            const grouped = filtered.reduce((acc, item) => {
+                if (!acc[item.cat]) acc[item.cat] = [];
+                acc[item.cat].push(item);
+                return acc;
+            }, {});
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="text-slate-500 text-center mt-10 italic">No commands found. Try 'sudo'.</div>`;
+                return;
+            }
+
+            let html = '';
+            for (const [cat, items] of Object.entries(grouped)) {
+                html += `
+                    <div class="mb-6">
+                        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 border-b border-slate-800 pb-1">${cat}</h4>
+                        <div class="space-y-3">
+                            ${items.map(item => `
+                                <div class="bg-slate-800/50 p-3 rounded border border-slate-700 hover:border-slate-600 transition group relative">
+                                    <div class="flex justify-between items-start">
+                                        <code class="text-green-400 font-mono text-sm font-bold">${item.cmd}</code>
+                                        <button onclick="copyToClipboard('${item.cmd}')" class="text-slate-500 hover:text-white transition opacity-50 group-hover:opacity-100" title="Copy">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </div>
+                                    <p class="text-slate-400 text-xs mt-2 leading-tight">${item.desc}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function filterCheatsheet() {
+            const input = document.getElementById('command-search');
+            renderCheatsheet(input.value);
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const toast = document.getElementById('copy-toast');
+                toast.classList.remove('opacity-0', 'pointer-events-none');
+                setTimeout(() => {
+                    toast.classList.add('opacity-0', 'pointer-events-none');
+                }, 2000);
+            });
+        }
+
+        // Start
+        init();
+
+    </script>
+</body>
+</html>

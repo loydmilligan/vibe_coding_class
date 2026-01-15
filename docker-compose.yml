@@ -1,0 +1,12 @@
+services:
+  web:
+    build: .
+    container_name: vibe_course_web
+    ports:
+      - "2256:80"
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
