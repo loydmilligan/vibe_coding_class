@@ -114,10 +114,10 @@
         <!-- Content injected by JS -->
     </main>
 
-    <!-- Shared Overlay -->
-    <div id="modal-overlay" onclick="closeAllModals()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300"></div>
+    <!-- Shared Overlay (Z-Index 40, below modals but above content) -->
+    <div id="modal-overlay" onclick="closeAllModals()" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-300 cursor-pointer"></div>
 
-    <!-- Right Side: Glossary Panel -->
+    <!-- Right Side: Glossary Panel (Z-Index 50) -->
     <aside id="glossary-panel" class="fixed top-0 right-0 h-full w-full md:w-[480px] bg-slate-900 border-l border-slate-700 z-50 transform translate-x-full transition-transform duration-300 shadow-2xl flex flex-col">
         <div class="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900">
             <h2 class="text-xl font-bold text-white mono"><i class="fas fa-book-open text-pink-500 mr-2"></i>System Glossary</h2>
@@ -128,7 +128,7 @@
         <div class="p-6 overflow-y-auto custom-scroll flex-1 space-y-8" id="glossary-content"></div>
     </aside>
 
-    <!-- Left Side: Cheatsheet Panel -->
+    <!-- Left Side: Cheatsheet Panel (Z-Index 50) -->
     <aside id="cheatsheet-panel" class="fixed top-0 left-0 h-full w-full md:w-[480px] bg-slate-900 border-r border-slate-700 z-50 transform -translate-x-full transition-transform duration-300 shadow-2xl flex flex-col">
         <div class="p-6 border-b border-slate-800 bg-slate-900">
             <div class="flex justify-between items-center mb-4">
@@ -149,7 +149,22 @@
         </div>
     </aside>
 
-    <!-- Copy Toast -->
+    <!-- Center Modal: Walkthroughs (Z-Index 50) -->
+    <div id="center-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden pointer-events-none opacity-0 transition-opacity duration-300">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col pointer-events-auto transform scale-95 transition-transform duration-300" id="center-modal-content">
+            <div class="p-6 border-b border-slate-800 flex justify-between items-center">
+                <h2 id="modal-title" class="text-xl font-bold text-white mono"></h2>
+                <button onclick="closeAllModals()" class="text-slate-400 hover:text-white p-2">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="modal-body" class="p-6 overflow-y-auto custom-scroll text-slate-300 space-y-4">
+                <!-- Content Injected Here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Copy Toast (Z-Index 60) -->
     <div id="copy-toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-green-900/90 text-green-200 px-4 py-2 rounded-lg border border-green-500/50 opacity-0 pointer-events-none z-[60] text-sm mono">
         <i class="fas fa-check mr-2"></i>Copied to clipboard
     </div>
@@ -298,21 +313,37 @@
                         <div class="bg-black p-4 rounded border border-slate-700 relative group">
                             <button onclick="copyToClipboard(this.nextElementSibling.innerText)" class="absolute top-2 right-2 text-slate-500 hover:text-white"><i class="fas fa-copy"></i></button>
                             <pre class="text-xs overflow-x-auto mono text-slate-300 leading-relaxed"><span class="text-pink-500">services:</span>
-  <span class="text-cyan-400">filebrowser:</span>                  <span class="text-slate-500"># Name of the service</span>
-    <span class="text-purple-400">image:</span> filebrowser/filebrowser:s6 <span class="text-slate-500"># The software blueprint</span>
-    <span class="text-purple-400">container_name:</span> filebrowser
-    <span class="text-purple-400">restart:</span> unless-stopped       <span class="text-slate-500"># Auto-reboot if it crashes</span>
+  <span class="text-cyan-400">vibe_course:</span>                 <span class="text-slate-500"># Name of the service</span>
+    <span class="text-purple-400">image:</span> nginx:alpine        <span class="text-slate-500"># Using Nginx Web Server</span>
+    <span class="text-purple-400">container_name:</span> vibe_course
+    <span class="text-purple-400">restart:</span> unless-stopped    <span class="text-slate-500"># Auto-reboot if it crashes</span>
     <span class="text-purple-400">ports:</span>
-      - <span class="text-yellow-300">"8080:80"</span>                 <span class="text-slate-500"># Host Port : Container Port</span>
+      - <span class="text-yellow-300">"2256:80"</span>                <span class="text-slate-500"># Host Port (2256) : Container Port (80)</span>
     <span class="text-purple-400">volumes:</span>
-      - <span class="text-yellow-300">"$HOME/data:/srv"</span>         <span class="text-slate-500"># Map Pi folder to Container folder</span>
-      - <span class="text-yellow-300">"./db:/database"</span>          <span class="text-slate-500"># Persist settings</span></pre>
+      - <span class="text-yellow-300">"./public:/usr/share/nginx/html"</span> <span class="text-slate-500"># Map the 'public' folder to Nginx</span></pre>
                         </div>
-                        <p class="text-xs mt-2 text-slate-500">Read the <a href="https://docs.docker.com/compose/" target="_blank">Official Compose Specification</a>.</p>
 
-                        <div class="bg-slate-800 p-4 rounded border border-slate-700 mt-4">
-                            <strong class="text-cyan-400 block mb-2 text-xs uppercase">Exercise: The File Server</strong>
-                            <p class="text-sm mb-3">Save the above as <code>docker-compose.yml</code> and run <code>docker compose up -d</code>.</p>
+                        <div class="mt-8 border-t border-slate-800 pt-6">
+                            <strong class="text-cyan-400 block mb-4 text-xs uppercase">Choose Your Deployment Adventure</strong>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <button onclick="openWalkthrough('filebrowser')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg p-4 text-left transition group">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <i class="fas fa-folder-open text-yellow-500 text-xl"></i>
+                                        <i class="fas fa-arrow-right text-slate-600 group-hover:text-white transition"></i>
+                                    </div>
+                                    <h4 class="font-bold text-white mb-1">Filebrowser</h4>
+                                    <p class="text-xs text-slate-400">A web-based file manager. Instant gratification.</p>
+                                </button>
+                                
+                                <button onclick="openWalkthrough('sponsorblock')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg p-4 text-left transition group">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <i class="fas fa-tv text-purple-500 text-xl"></i>
+                                        <i class="fas fa-arrow-right text-slate-600 group-hover:text-white transition"></i>
+                                    </div>
+                                    <h4 class="font-bold text-white mb-1">iSponsorBlockTV</h4>
+                                    <p class="text-xs text-slate-400">Skip YouTube sponsors on your Smart TV.</p>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `
@@ -512,6 +543,94 @@
             { cmd: "docker compose up -d", desc: "Start the stack in the background (detached).", cat: "Docker" },
             { cmd: "docker compose down", desc: "Stop and remove the stack.", cat: "Docker" }
         ];
+
+        // --- Data: Walkthroughs ---
+        const walkthroughData = {
+            "filebrowser": {
+                title: "Deploying Filebrowser",
+                content: `
+                    <p class="mb-4">Filebrowser provides a UI for your filesystem. Essential for managing files without CLI.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <span class="text-xs text-slate-500 uppercase font-bold">1. Create a workspace</span>
+                            <div class="relative group mt-1">
+                                <button onclick="copyToClipboard('mkdir -p ~/dockers/filebrowser')" class="absolute top-2 right-2 text-slate-500 hover:text-white"><i class="fas fa-copy"></i></button>
+                                <pre class="bg-black p-3 rounded text-xs text-green-400">mkdir -p ~/dockers/filebrowser && cd ~/dockers/filebrowser</pre>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-500 uppercase font-bold">2. Create Compose File</span>
+                            <div class="relative group mt-1">
+                                <button onclick="copyToClipboard(this.nextElementSibling.innerText)" class="absolute top-2 right-2 text-slate-500 hover:text-white"><i class="fas fa-copy"></i></button>
+                                <pre class="bg-black p-3 rounded text-xs text-slate-300 overflow-x-auto">services:
+  filebrowser:
+    image: filebrowser/filebrowser:s6
+    container_name: filebrowser
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - $HOME:/srv
+      - ./database.db:/database/filebrowser.db
+      - ./settings.json:/config/settings.json</pre>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Use <code>nano docker-compose.yml</code> and paste the above.</p>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-500 uppercase font-bold">3. Launch</span>
+                            <div class="relative group mt-1">
+                                <button onclick="copyToClipboard('touch database.db settings.json && docker compose up -d')" class="absolute top-2 right-2 text-slate-500 hover:text-white"><i class="fas fa-copy"></i></button>
+                                <pre class="bg-black p-3 rounded text-xs text-green-400">touch database.db settings.json && docker compose up -d</pre>
+                            </div>
+                        </div>
+                         <div class="bg-yellow-900/20 border border-yellow-700 p-3 rounded text-xs text-yellow-500">
+                            <strong>Access:</strong> http://vibepi.local:8080<br>
+                            <strong>Default Creds:</strong> admin / admin
+                        </div>
+                    </div>
+                `
+            },
+            "sponsorblock": {
+                title: "iSponsorBlockTV",
+                content: `
+                    <p class="mb-4">A tool to skip YouTube sponsorships on smart TVs (Android TV, WebOS, etc).</p>
+                    <div class="space-y-4">
+                        <div>
+                            <span class="text-xs text-slate-500 uppercase font-bold">1. Create workspace</span>
+                            <div class="relative group mt-1">
+                                <button onclick="copyToClipboard('mkdir -p ~/dockers/sponsorblock')" class="absolute top-2 right-2 text-slate-500 hover:text-white"><i class="fas fa-copy"></i></button>
+                                <pre class="bg-black p-3 rounded text-xs text-green-400">mkdir -p ~/dockers/sponsorblock && cd ~/dockers/sponsorblock</pre>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-500 uppercase font-bold">2. Create Compose File</span>
+                            <div class="relative group mt-1">
+                                <button onclick="copyToClipboard(this.nextElementSibling.innerText)" class="absolute top-2 right-2 text-slate-500 hover:text-white"><i class="fas fa-copy"></i></button>
+                                <pre class="bg-black p-3 rounded text-xs text-slate-300 overflow-x-auto">services:
+  isponsorblocktv:
+    image: ghcr.io/dmunozv04/isponsorblocktv:latest
+    container_name: isponsorblocktv
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data</pre>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Use <code>nano docker-compose.yml</code> and paste the above.</p>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-500 uppercase font-bold">3. Launch & Pair</span>
+                            <div class="relative group mt-1">
+                                <button onclick="copyToClipboard('docker compose up -d')" class="absolute top-2 right-2 text-slate-500 hover:text-white"><i class="fas fa-copy"></i></button>
+                                <pre class="bg-black p-3 rounded text-xs text-green-400">docker compose up -d</pre>
+                            </div>
+                        </div>
+                        <div class="bg-blue-900/20 border border-blue-700 p-3 rounded text-xs text-blue-400">
+                            <strong>Important:</strong> After starting, you must check the logs to pair your TV.
+                            <br>Run: <code class="text-white">docker logs isponsorblocktv</code>
+                        </div>
+                    </div>
+                `
+            }
+        };
 
         // --- Logic: Core ---
         
@@ -764,14 +883,45 @@ This file should explain the project to future AI sessions. It must include:
             }
         }
 
+        function openWalkthrough(key) {
+            const data = walkthroughData[key];
+            if (!data) return;
+
+            document.getElementById('modal-title').innerText = data.title;
+            document.getElementById('modal-body').innerHTML = data.content;
+            
+            const modal = document.getElementById('center-modal');
+            const content = document.getElementById('center-modal-content');
+            const overlay = document.getElementById('modal-overlay');
+
+            closeAllModals(); // Close side panels if open
+
+            modal.classList.remove('hidden', 'pointer-events-none', 'opacity-0');
+            content.classList.remove('scale-95');
+            content.classList.add('scale-100');
+            
+            overlay.classList.remove('hidden');
+            setTimeout(() => overlay.classList.add('opacity-100'), 10);
+        }
+
         function closeAllModals() {
             const glossPanel = document.getElementById('glossary-panel');
             const cheatPanel = document.getElementById('cheatsheet-panel');
+            const centerModal = document.getElementById('center-modal');
+            const centerContent = document.getElementById('center-modal-content');
             const overlay = document.getElementById('modal-overlay');
 
+            // Slide Outs
             glossPanel.classList.add('translate-x-full');
             cheatPanel.classList.add('-translate-x-full');
             
+            // Center Modal
+            centerModal.classList.add('opacity-0', 'pointer-events-none');
+            centerContent.classList.remove('scale-100');
+            centerContent.classList.add('scale-95');
+            setTimeout(() => centerModal.classList.add('hidden'), 300);
+
+            // Overlay
             overlay.classList.remove('opacity-100');
             setTimeout(() => overlay.classList.add('hidden'), 300);
         }
