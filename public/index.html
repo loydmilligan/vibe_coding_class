@@ -242,22 +242,106 @@
                 desc: "Managing packages and automating the mess.",
                 content: `
                     <div class="space-y-4 text-slate-300">
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <div class="bg-slate-800 p-4 rounded border border-slate-700">
-                                <h4 class="font-bold text-white mb-2">Package Management</h4>
-                                <code class="block text-green-400 text-xs mb-1">sudo apt update && sudo apt upgrade</code>
-                                <p class="text-xs text-slate-400">Runs the update cycle. Do this often.</p>
-                            </div>
-                            <div class="bg-slate-800 p-4 rounded border border-slate-700">
-                                <h4 class="font-bold text-white mb-2">Permissions</h4>
-                                <code class="block text-green-400 text-xs mb-1">chmod +x script.sh</code>
-                                <p class="text-xs text-slate-400">Makes a file executable. See <a href="https://chmod-calculator.com/" target="_blank">chmod calculator</a>.</p>
+                        <div class="bg-slate-800 p-4 rounded border border-slate-700 mb-6">
+                            <h4 class="font-bold text-white mb-2 uppercase text-xs tracking-wider">Core Tools</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-center text-xs mono">
+                                <div class="bg-slate-900 p-2 rounded text-blue-400">nano<br><span class="text-slate-500">Editor</span></div>
+                                <div class="bg-slate-900 p-2 rounded text-blue-400">mv<br><span class="text-slate-500">Move</span></div>
+                                <div class="bg-slate-900 p-2 rounded text-blue-400">cp<br><span class="text-slate-500">Copy</span></div>
+                                <div class="bg-slate-900 p-2 rounded text-blue-400">rm<br><span class="text-slate-500">Remove</span></div>
                             </div>
                         </div>
+
                         <div class="mt-4">
                             <strong class="text-blue-400 block mb-2 text-xs uppercase">Exercise: The Organizer</strong>
-                            <p class="text-sm mb-2">Create a script <code>organizer.sh</code> to move <code>.jpg</code> and <code>.txt</code> files into separate folders. Test it on a dummy directory.</p>
-                            <a href="https://devhints.io/bash" target="_blank" class="text-xs">Bash Cheatsheet</a>
+                            <p class="text-sm mb-4">Let's create a script that actually does something useful. We will organize files into folders and optionally delete old junk.</p>
+                            
+                            <!-- Step 1: Nav -->
+                            <div class="mb-4">
+                                <span class="text-xs text-slate-500 font-bold uppercase">1. Go to the Danger Zone</span>
+                                <p class="text-xs text-slate-400 mb-1">If using WSL, you can clean your real Windows Downloads folder. If on Pi, create a dummy one.</p>
+                                <div class="relative group">
+                                    <button onclick="copyToClipboard('cd /mnt/c/Users/$(whoami)/Downloads')" class="absolute top-2 right-2 text-slate-500 hover:text-white"><i class="fas fa-copy"></i></button>
+                                    <pre class="bg-black p-3 rounded text-xs text-green-400">cd /mnt/c/Users/$(whoami)/Downloads</pre>
+                                </div>
+                            </div>
+
+                            <!-- Step 2: Nano -->
+                            <div class="mb-4">
+                                <span class="text-xs text-slate-500 font-bold uppercase">2. Create the Script</span>
+                                <div class="relative group">
+                                    <button onclick="copyToClipboard('nano file-org.sh')" class="absolute top-2 right-2 text-slate-500 hover:text-white"><i class="fas fa-copy"></i></button>
+                                    <pre class="bg-black p-3 rounded text-xs text-green-400">nano file-org.sh</pre>
+                                </div>
+                            </div>
+
+                            <!-- Step 3: The Code -->
+                            <div class="mb-4">
+                                <span class="text-xs text-slate-500 font-bold uppercase">3. Paste This Code</span>
+                                <div class="relative group">
+                                    <button onclick="copyToClipboard(this.nextElementSibling.innerText)" class="absolute top-2 right-2 text-slate-500 hover:text-white"><i class="fas fa-copy"></i></button>
+                                    <pre class="bg-black p-3 rounded text-xs text-slate-300 overflow-x-auto">#!/bin/bash
+# Usage: ./file-org.sh [size_limit_mb] [days_old_limit]
+
+SOURCE_DIR="."
+
+echo "Creating directories..."
+mkdir -p "$SOURCE_DIR/Documents" "$SOURCE_DIR/images" "$SOURCE_DIR/office-docs" "$SOURCE_DIR/pdfs" "$SOURCE_DIR/music"
+
+echo "Organizing files..."
+# Move files (suppress errors with 2>/dev/null)
+mv "$SOURCE_DIR"/*.jpg "$SOURCE_DIR"/*.png "$SOURCE_DIR"/*.gif "$SOURCE_DIR/images/" 2>/dev/null
+mv "$SOURCE_DIR"/*.docx "$SOURCE_DIR"/*.xlsx "$SOURCE_DIR"/*.pptx "$SOURCE_DIR/office-docs/" 2>/dev/null
+mv "$SOURCE_DIR"/*.pdf "$SOURCE_DIR"/*.txt "$SOURCE_DIR/Documents/" 2>/dev/null
+mv "$SOURCE_DIR"/*.mp3 "$SOURCE_DIR"/*.wav "$SOURCE_DIR/music/" 2>/dev/null
+
+# Optional Cleanup
+SIZE_LIMIT=$1
+DAYS_LIMIT=$2
+
+if [ -n "$SIZE_LIMIT" ]; then
+    echo "Deleting files larger than \${SIZE_LIMIT}MB..."
+    find "$SOURCE_DIR" -maxdepth 1 -type f -size +"\${SIZE_LIMIT}M" -delete
+fi
+
+if [ -n "$DAYS_LIMIT" ]; then
+    echo "Deleting files older than \${DAYS_LIMIT} days..."
+    find "$SOURCE_DIR" -maxdepth 1 -type f -mtime +"\${DAYS_LIMIT}" -delete
+fi
+
+echo "Done."</pre>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-1">Press <span class="text-white font-bold">Ctrl+O</span>, <span class="text-white font-bold">Enter</span> to save. <span class="text-white font-bold">Ctrl+X</span> to exit.</p>
+                            </div>
+
+                            <!-- Step 4: Breakdown -->
+                            <div class="bg-slate-800 p-4 rounded border border-slate-700 mb-4">
+                                <h5 class="text-xs font-bold text-slate-400 uppercase mb-2">Code Autopsy</h5>
+                                <ul class="list-disc list-inside text-xs text-slate-400 space-y-1">
+                                    <li><code class="text-blue-300">#!/bin/bash</code>: The "Shebang". Tells Linux this is a bash script.</li>
+                                    <li><code class="text-blue-300">mkdir -p</code>: Make directory, but don't complain if it exists.</li>
+                                    <li><code class="text-blue-300">2>/dev/null</code>: Send error messages to the void (silence them).</li>
+                                    <li><code class="text-blue-300">$1 / $2</code>: The 1st and 2nd arguments you type when running the script.</li>
+                                    <li><code class="text-blue-300">find ... -delete</code>: The dangerous part. Finds files matching criteria and nukes them.</li>
+                                </ul>
+                            </div>
+
+                            <!-- Step 5: Run -->
+                            <div>
+                                <span class="text-xs text-slate-500 font-bold uppercase">4. Run It</span>
+                                <div class="relative group mb-2">
+                                    <button onclick="copyToClipboard('chmod +x file-org.sh')" class="absolute top-2 right-2 text-slate-500 hover:text-white"><i class="fas fa-copy"></i></button>
+                                    <pre class="bg-black p-3 rounded text-xs text-green-400">chmod +x file-org.sh</pre>
+                                </div>
+                                <div class="bg-black p-3 rounded text-xs text-slate-300">
+                                    <p class="text-slate-500"># Run Basic Sort:</p>
+                                    <p class="text-green-400 mb-2">./file-org.sh</p>
+                                    <p class="text-slate-500"># Sort + Delete files > 100MB:</p>
+                                    <p class="text-green-400 mb-2">./file-org.sh 100</p>
+                                    <p class="text-slate-500"># Sort + Delete > 100MB AND older than 30 days:</p>
+                                    <p class="text-green-400">./file-org.sh 100 30</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `
@@ -305,7 +389,12 @@
                 content: `
                     <div class="space-y-4 text-slate-300">
                         <p>Software dependencies are fragile. Docker creates immutable boxes for your apps.</p>
-                        <code class="block bg-black p-3 rounded text-green-400 text-xs">curl -fsSL https://get.docker.com | sh</code>
+                        
+                        <div class="bg-black p-3 rounded border border-slate-700">
+                            <p class="text-slate-500 text-xs mb-1"># 1. Install Docker & Git</p>
+                            <code class="block text-green-400 text-xs mb-2">curl -fsSL https://get.docker.com | sh</code>
+                            <code class="block text-green-400 text-xs">sudo apt install -y git</code>
+                        </div>
                         
                         <h4 class="font-bold text-white mt-6 mb-2">Anatomy of a Docker Compose</h4>
                         <p class="text-sm text-slate-400 mb-2">Create a <code>docker-compose.yml</code> file. This defines your stack.</p>
@@ -325,6 +414,21 @@
 
                         <div class="mt-8 border-t border-slate-800 pt-6">
                             <strong class="text-cyan-400 block mb-4 text-xs uppercase">Choose Your Deployment Adventure</strong>
+                            
+                            <!-- Self Host Card -->
+                            <div class="bg-slate-800 p-4 rounded border border-slate-700 mb-4">
+                                <strong class="text-white text-sm block mb-2"><i class="fas fa-server text-cyan-500 mr-2"></i>Self-Host THIS Course</strong>
+                                <div class="bg-black p-3 rounded mono text-xs text-slate-300 space-y-2 relative group">
+                                     <button onclick="copyToClipboard(this.nextElementSibling.innerText)" class="absolute top-2 right-2 text-slate-500 hover:text-white"><i class="fas fa-copy"></i></button>
+                                     <div class="pr-6">
+                                        <p><span class="text-slate-500"># Clone repo:</span><br>git clone git@github.com:loydmilligan/vibe_coding_class.git</p>
+                                        <p><span class="text-slate-500"># Enter dir:</span><br>cd vibe_coding_class</p>
+                                        <p><span class="text-slate-500"># Launch:</span><br>docker compose up -d</p>
+                                     </div>
+                                </div>
+                                <p class="text-xs mt-2 text-slate-400">Then visit <span class="text-white">http://vibepi.local:2256</span>.</p>
+                            </div>
+
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <button onclick="openWalkthrough('filebrowser')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg p-4 text-left transition group">
                                     <div class="flex justify-between items-center mb-2">
