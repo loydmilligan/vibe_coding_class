@@ -1,0 +1,11 @@
+{
+  "name": "terminal-basecamp-helper",
+  "private": true,
+  "type": "module",
+  "description": "Help bot backend for the Terminal Basecamp course. No dependencies.",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": { "node": ">=22" }
+}

@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal Basecamp</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #e2e8f0; overflow-x: hidden; }
+        h1, h2, h3, h4, .mono, pre, code, kbd { font-family: 'JetBrains Mono', monospace; }
+        a { color: #f472b6; text-decoration: underline; text-underline-offset: 2px; }
+        a:hover { color: #fbcfe8; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #1e293b; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        .locked { filter: grayscale(1); opacity: 0.5; }
+        .prose-lesson p { margin-bottom: 0.6rem; line-height: 1.6; }
+        .prose-lesson ul { list-style: disc; padding-left: 1.4rem; margin-bottom: 0.6rem; }
+        .prose-lesson ol { list-style: decimal; padding-left: 1.4rem; margin-bottom: 0.6rem; }
+        .prose-lesson li { margin-bottom: 0.25rem; line-height: 1.55; }
+        .prose-lesson code, .chat-msg code { background: #1e293b; color: #fbcfe8; padding: 0.05rem 0.3rem; border-radius: 4px; font-size: 0.9em; }
+        .prose-lesson kbd { background: #334155; border: 1px solid #475569; border-bottom-width: 2px; border-radius: 4px; padding: 0 0.3rem; font-size: 0.8em; }
+        .prose-lesson .tip { border-left: 3px solid #38bdf8; background: rgba(14,165,233,0.08); padding: 0.5rem 0.75rem; border-radius: 0 6px 6px 0; font-size: 0.9rem; }
+        .prose-lesson .warn { border-left: 3px solid #f87171; background: rgba(239,68,68,0.08); padding: 0.5rem 0.75rem; border-radius: 0 6px 6px 0; font-size: 0.9rem; }
+        .prose-lesson pre.tree { background: #020617; border: 1px solid #334155; padding: 0.75rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 0.6rem; overflow-x: auto; }
+        .codeblock pre { white-space: pre; overflow-x: auto; }
+        .chat-msg pre { background: #020617; border: 1px solid #334155; padding: 0.6rem; border-radius: 6px; overflow-x: auto; white-space: pre; margin: 0.4rem 0; font-size: 0.85rem; position: relative; }
+        .chat-msg pre code { background: transparent; padding: 0; color: #a7f3d0; }
+        .chat-msg ul, .chat-msg ol { padding-left: 1.2rem; margin: 0.3rem 0; }
+        .chat-msg ul { list-style: disc; } .chat-msg ol { list-style: decimal; }
+        .chat-msg p { margin: 0.3rem 0; }
+        #copy-toast { transition: opacity 0.3s ease-in-out; }
+        textarea { background-color: #1e293b; border-color: #334155; color: white; }
+        textarea:focus { outline: none; border-color: #f472b6; }
+    </style>
+</head>
+<body class="antialiased selection:bg-pink-500 selection:text-white">
+
+    <nav class="fixed top-0 w-full bg-slate-900/95 backdrop-blur-sm border-b border-slate-700 z-30">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <button onclick="toggleCheatsheet()" class="text-sm mono text-slate-300 hover:text-white border border-slate-600 px-3 py-1 rounded hover:bg-slate-800 transition">
+                    <i class="fas fa-terminal mr-2"></i>Commands
+                </button>
+                <span class="mono font-bold text-pink-500 text-lg hidden md:inline">BASECAMP</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="hidden md:block text-xs text-slate-500 mono">Progress: <span id="progress-percent">0%</span></div>
+                <a href="/" class="text-xs text-slate-500 hover:text-slate-300 no-underline hidden md:inline">Other course</a>
+                <button onclick="openHelper()" class="text-sm mono text-white bg-violet-600 hover:bg-violet-500 px-3 py-1 rounded transition">
+                    <i class="fas fa-life-ring mr-2"></i>Helper
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <header class="pt-28 pb-10 px-4 max-w-4xl mx-auto text-center">
+        <h1 class="text-4xl md:text-6xl font-bold mb-5 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-violet-500">Terminal Basecamp</h1>
+        <p class="text-xl text-slate-400 mb-8 max-w-2xl mx-auto">From a Windows PC to Linux, Codex, Docker and your own AI helper, one command at a time.</p>
+        <div class="bg-slate-800 rounded-lg p-6 text-left border border-slate-700 mx-auto max-w-2xl text-sm">
+            <h3 class="text-violet-400 font-bold uppercase tracking-wider mb-3 text-xs"><i class="fas fa-route mr-2"></i>How this works</h3>
+            <ul class="space-y-2 text-slate-300">
+                <li><i class="fas fa-book-open text-pink-400 w-5"></i> Each lesson teaches one command: what it does, the command to copy, then a small exercise.</li>
+                <li><i class="fas fa-flag-checkered text-amber-400 w-5"></i> Each section ends with a bigger task that uses everything in it. Finishing it unlocks the next section.</li>
+                <li><i class="fas fa-life-ring text-violet-400 w-5"></i> Stuck? Press <strong>Ask the helper</strong> on any exercise. It starts with small hints, and if you keep asking, it walks you through the whole thing. That's how it's meant to be used: no shame in step 4.</li>
+                <li><i class="fas fa-paste text-sky-400 w-5"></i> Copy with the <i class="fas fa-copy"></i> icon; paste into a terminal with right-click.</li>
+            </ul>
+            <p class="text-xs text-slate-500 mt-4">Your progress is saved in this browser.</p>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 pb-24 space-y-6" id="course-container"></main>
+
+    <footer class="text-center py-8 text-slate-600 text-sm border-t border-slate-800">
+        <p>Made for Sarah. Break things in the playground, not in your home folder.</p>
+        <button onclick="resetProgress()" class="mt-4 text-xs text-red-900 hover:text-red-500 underline">Reset progress</button>
+    </footer>
+
+    <div id="overlay" onclick="closePanels()" class="fixed inset-0 bg-black/60 z-40 hidden"></div>
+
+    <!-- Commands panel -->
+    <aside id="cheatsheet-panel" class="fixed top-0 left-0 h-full w-full md:w-[460px] bg-slate-900 border-r border-slate-700 z-50 transform -translate-x-full transition-transform duration-300 shadow-2xl flex flex-col">
+        <div class="p-5 border-b border-slate-800">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-lg font-bold text-white mono"><i class="fas fa-terminal text-green-500 mr-2"></i>Commands so far</h2>
+                <button onclick="closePanels()" class="text-slate-400 hover:text-white p-2" aria-label="Close"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <input type="text" id="command-search" placeholder="Find a command (e.g. 'copy')" oninput="renderCheatsheet()"
+                   class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-slate-200 mono text-sm focus:outline-none focus:border-green-500">
+        </div>
+        <div class="p-5 overflow-y-auto custom-scroll flex-1 space-y-3" id="cheatsheet-content"></div>
+    </aside>
+
+    <!-- Helper panel -->
+    <aside id="helper-panel" class="fixed top-0 right-0 h-full w-full md:w-[480px] bg-slate-900 border-l border-slate-700 z-50 transform translate-x-full transition-transform duration-300 shadow-2xl flex flex-col">
+        <div class="p-4 border-b border-slate-800">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-bold text-white mono"><i class="fas fa-life-ring text-violet-400 mr-2"></i>Helper</h2>
+                <button onclick="closePanels()" class="text-slate-400 hover:text-white p-2" aria-label="Close"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div id="helper-context" class="mt-2 text-xs text-slate-400"></div>
+            <div id="helper-ladder" class="mt-2 flex gap-1 text-[10px] mono"></div>
+        </div>
+        <div id="helper-log" class="flex-1 overflow-y-auto custom-scroll p-4 space-y-3"></div>
+        <div class="p-4 border-t border-slate-800 space-y-2">
+            <div id="helper-actions" class="flex flex-wrap gap-2"></div>
+            <div class="flex gap-2">
+                <textarea id="helper-input" rows="3" class="flex-1 border rounded p-2 text-sm" placeholder="Ask anything, or paste an error message... (Enter sends, Shift+Enter for a new line)"></textarea>
+                <button id="helper-send" onclick="sendHelp()" class="bg-violet-600 hover:bg-violet-500 text-white px-4 rounded"><i class="fas fa-paper-plane"></i></button>
+            </div>
+            <p class="text-[11px] text-slate-500"><i class="fas fa-lock mr-1"></i>Never paste a password or API key here.</p>
+        </div>
+    </aside>
+
+    <button onclick="openHelper()" class="fixed bottom-6 right-6 z-30 bg-violet-600 hover:bg-violet-500 text-white rounded-full w-14 h-14 shadow-xl flex items-center justify-center" aria-label="Open helper">
+        <i class="fas fa-life-ring text-2xl"></i>
+    </button>
+
+    <div id="copy-toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-green-900/90 text-green-200 px-4 py-2 rounded-lg border border-green-500/50 opacity-0 pointer-events-none z-[60] text-sm mono">
+        <i class="fas fa-check mr-2"></i>Copied
+    </div>
+
+    <script src="lessons.js"></script>
+    <script>
+        // ---------------------------------------------------------------- state
+        const STORE_KEY = "terminal_basecamp_v1";
+        const MAX_HISTORY = 10;
+        let state = loadState();
+        let helperContextId = null; // exercise id the helper is on, or null for a general question
+        let sending = false;
+        const fileCache = {};
+
+        function loadState() {
+            try {
+                const s = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
+                return { done: s.done || {}, help: s.help || {}, general: s.general || { history: [] }, open: s.open ?? 0 };
+            } catch { return { done: {}, help: {}, general: { history: [] }, open: 0 }; }
+        }
+        function saveState() {
+            try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch { /* private window: progress just won't persist */ }
+        }
+        function resetProgress() {
+            if (!confirm("Reset all progress and helper history?")) return;
+            state = { done: {}, help: {}, general: { history: [] }, open: 0 };
+            saveState();
+            renderCourse(); renderHelper();
+        }
+
+        // ---------------------------------------------------------------- lookups
+        const escapeHtml = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        const stripHtml = (html) => { const d = document.createElement("div"); d.innerHTML = html; return d.textContent.replace(/\s+\n/g, "\n").trim(); };
+
+        function allExercises() {
+            const out = [];
+            SECTIONS.forEach((sec, si) => {
+                sec.lessons.forEach((les, li) => out.push({ id: les.id, sec, si, les, kind: "lesson", label: `Exercise ${si + 1}.${li + 1}` }));
+                out.push({ id: sec.capstone.id, sec, si, les: sec.capstone, kind: "capstone", label: `Section ${si + 1} task` });
+            });
+            return out;
+        }
+        const EXERCISES = allExercises();
+        const findExercise = (id) => EXERCISES.find((e) => e.id === id);
+
+        function isUnlocked(si) { return si === 0 || !!state.done[SECTIONS[si - 1].capstone.id]; }
+        function updateProgress() {
+            const total = EXERCISES.length;
+            const done = EXERCISES.filter((e) => state.done[e.id]).length;
+            document.getElementById("progress-percent").textContent = Math.round((done / total) * 100) + "%";
+        }
+
+        // ---------------------------------------------------------------- code blocks
+        function codeText(block) { return block.file ? (fileCache[block.file] ?? "Loading...") : block.text; }
+
+        function renderCode(block, idx, key) {
+            const w = WHERE[block.where] || WHERE.ubuntu;
+            const label = block.label ? `${w.label}: ${escapeHtml(block.label)}` : w.label;
+            const id = `code-${key}-${idx}`;
+            return `
+                <div class="codeblock rounded-lg border border-slate-700 overflow-hidden my-3">
+                    <div class="flex justify-between items-center bg-slate-800 px-3 py-1.5 text-xs">
+                        <span class="text-${w.color}-400 mono"><i class="${w.brand ? "fab" : "fas"} ${w.icon} mr-1"></i>${label}</span>
+                        <button onclick="copyBlock('${id}')" class="text-slate-400 hover:text-white" title="Copy"><i class="fas fa-copy mr-1"></i>Copy</button>
+                    </div>
+                    <pre id="${id}" data-file="${block.file || ""}" class="bg-black p-3 text-sm text-green-300 custom-scroll">${escapeHtml(codeText(block))}</pre>
+                </div>`;
+        }
+        async function loadFiles() {
+            const files = new Set();
+            SECTIONS.forEach((s) => [...s.lessons, s.capstone].forEach((l) => (l.code || []).forEach((c) => c.file && files.add(c.file))));
+            await Promise.all([...files].map(async (f) => {
+                try {
+                    const r = await fetch(f, { cache: "no-cache" });
+                    fileCache[f] = r.ok ? await r.text() : `Couldn't load ${f} (${r.status}).`;
+                } catch { fileCache[f] = `Couldn't load ${f}.`; }
+                document.querySelectorAll(`pre[data-file="${f}"]`).forEach((p) => (p.textContent = fileCache[f]));
+            }));
+        }
+        function copyBlock(id) { copyToClipboard(document.getElementById(id).textContent); }
+        function copyToClipboard(text) {
+            const done = () => {
+                const t = document.getElementById("copy-toast");
+                t.classList.remove("opacity-0"); setTimeout(() => t.classList.add("opacity-0"), 1500);
+            };
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
+            } else fallbackCopy(text, done);
+        }
+        function fallbackCopy(text, done) {
+            const ta = document.createElement("textarea");
+            ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand("copy"); done(); } catch { alert("Copy didn't work. Select the text and press Ctrl+C."); }
+            ta.remove();
+        }
+
+        // ---------------------------------------------------------------- course
+        function exerciseBox(ex, isCap) {
+            const done = !!state.done[ex.id];
+            const asks = state.help[ex.id]?.count || 0;
+            const data = isCap ? ex.les : ex.les.exercise;
+            const tone = isCap ? "amber" : "violet";
+            return `
+                <div class="rounded-lg border border-${tone}-500/40 bg-${tone}-900/10 p-4 mt-3">
+                    <div class="text-${tone}-400 text-xs uppercase font-bold tracking-wider mb-2 mono">
+                        <i class="fas ${isCap ? "fa-flag-checkered" : "fa-dumbbell"} mr-1"></i>${isCap ? "Section task: " + escapeHtml(ex.les.title) : "Your turn"}
+                    </div>
+                    <div class="prose-lesson text-slate-200">${data.task}</div>
+                    <div class="text-sm text-slate-400 mt-2"><i class="fas fa-circle-check mr-1 text-green-600"></i><strong>You'll know it worked when:</strong> ${data.check}</div>
+                    <div class="flex flex-wrap gap-2 mt-3">
+                        <button onclick="toggleDone('${ex.id}')" class="text-sm mono border px-3 py-1.5 rounded transition ${done ? "border-green-600 bg-green-900/30 text-green-400" : "border-slate-500 text-slate-300 hover:bg-slate-800"}">
+                            <i class="fas ${done ? "fa-check-square" : "fa-square"} mr-2"></i>${done ? "Done" : "I did it"}
+                        </button>
+                        <button onclick="askAbout('${ex.id}')" class="text-sm mono border border-violet-500 text-violet-300 hover:bg-violet-600 hover:text-white px-3 py-1.5 rounded transition">
+                            <i class="fas fa-life-ring mr-2"></i>${asks ? `Ask the helper (asked ${asks}×)` : "Stuck? Ask the helper"}
+                        </button>
+                    </div>
+                </div>`;
+        }
+
+        function renderCourse() {
+            const c = document.getElementById("course-container");
+            c.innerHTML = "";
+            SECTIONS.forEach((sec, si) => {
+                const unlocked = isUnlocked(si);
+                const complete = !!state.done[sec.capstone.id];
+                const open = unlocked && state.open === si;
+                const lessonsHtml = sec.lessons.map((les, li) => {
+                    const ex = findExercise(les.id);
+                    return `
+                        <article class="border-t border-slate-800 pt-5 mt-5" id="lesson-${les.id}">
+                            <h3 class="text-lg font-bold text-white mb-2"><span class="text-${sec.color}-500 mr-2">${si + 1}.${li + 1}</span>${escapeHtml(les.title)}</h3>
+                            <div class="prose-lesson text-slate-300">${les.explain}</div>
+                            ${(les.code || []).map((b, bi) => renderCode(b, bi, les.id)).join("")}
+                            ${exerciseBox(ex, false)}
+                        </article>`;
+                }).join("");
+                c.insertAdjacentHTML("beforeend", `
+                    <section class="rounded-xl border ${!unlocked ? "locked border-slate-800" : complete ? "border-green-900" : open ? `border-${sec.color}-500` : "border-slate-700"} bg-slate-900/60 transition">
+                        <div class="p-5 flex items-center justify-between ${unlocked ? "cursor-pointer" : "cursor-not-allowed"}" onclick="toggleSection(${si})">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 shrink-0">
+                                    ${complete ? '<i class="fas fa-check text-green-500"></i>' : !unlocked ? '<i class="fas fa-lock text-slate-600"></i>' : `<i class="fas ${sec.icon} text-${sec.color}-500"></i>`}
+                                </div>
+                                <div>
+                                    <h2 class="text-xl font-bold text-white">${escapeHtml(sec.title)}</h2>
+                                    <p class="text-sm text-slate-500">${escapeHtml(sec.desc)}${!unlocked ? " (finish the section before to unlock)" : ""}</p>
+                                </div>
+                            </div>
+                            ${unlocked ? `<i class="fas fa-chevron-down text-slate-500 transition-transform ${open ? "rotate-180" : ""}"></i>` : ""}
+                        </div>
+                        ${open ? `
+                            <div class="px-5 pb-6">
+                                <div class="prose-lesson text-slate-300 bg-slate-800/40 border border-slate-700 rounded p-4">${sec.intro}</div>
+                                ${lessonsHtml}
+                                <div class="border-t border-slate-800 pt-5 mt-5" id="lesson-${sec.capstone.id}">
+                                    ${(sec.capstone.code || []).map((b, bi) => renderCode(b, bi, sec.capstone.id)).join("")}
+                                    ${exerciseBox(findExercise(sec.capstone.id), true)}
+                                </div>
+                            </div>` : ""}
+                    </section>`);
+            });
+            c.insertAdjacentHTML("beforeend", `
+                <section class="rounded-xl border border-dashed border-slate-700 p-5 flex items-center space-x-4 opacity-70">
+                    <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700"><i class="fas ${COMING_NEXT.icon} text-slate-400"></i></div>
+                    <div><h2 class="text-xl font-bold text-slate-300">${escapeHtml(COMING_NEXT.title)}</h2><p class="text-sm text-slate-500">${escapeHtml(COMING_NEXT.desc)}</p></div>
+                </section>`);
+            updateProgress();
+            renderCheatsheet();
+        }
+
+        function toggleSection(si) {
+            if (!isUnlocked(si)) return;
+            state.open = state.open === si ? -1 : si;
+            saveState(); renderCourse();
+        }
+        function toggleDone(id) {
+            const ex = findExercise(id);
+            state.done[id] = !state.done[id];
+            if (!state.done[id]) delete state.done[id];
+            // Finishing a section's task opens the next section.
+            if (ex.kind === "capstone" && state.done[id] && ex.si + 1 < SECTIONS.length) state.open = ex.si + 1;
+            saveState(); renderCourse();
+            if (ex.kind === "capstone" && state.done[id] && ex.si + 1 < SECTIONS.length) {
+                window.scrollTo({ top: document.querySelectorAll("#course-container > section")[ex.si + 1].offsetTop - 80, behavior: "smooth" });
+            }
+        }
+
+        // ---------------------------------------------------------------- commands panel
+        function renderCheatsheet() {
+            const q = (document.getElementById("command-search").value || "").toLowerCase();
+            const rows = [];
+            SECTIONS.forEach((sec, si) => {
+                if (!isUnlocked(si)) return;
+                sec.lessons.forEach((les) => (les.code || []).forEach((b) => {
+                    if (b.file || !["ubuntu", "powershell", "powershell-admin"].includes(b.where)) return;
+                    if (q && !(les.title + " " + b.text).toLowerCase().includes(q)) return;
+                    rows.push({ title: les.title, text: b.text, where: WHERE[b.where] });
+                }));
+            });
+            document.getElementById("cheatsheet-content").innerHTML = rows.length ? rows.map((r, i) => `
+                <div class="bg-slate-800/60 border border-slate-700 rounded p-3">
+                    <div class="flex justify-between text-xs mb-1"><span class="text-slate-300 font-semibold">${escapeHtml(r.title)}</span><span class="text-${r.where.color}-400">${r.where.label}</span></div>
+                    <div class="flex justify-between items-start gap-2">
+                        <pre id="cs-${i}" class="text-sm text-green-300 whitespace-pre-wrap">${escapeHtml(r.text)}</pre>
+                        <button onclick="copyBlock('cs-${i}')" class="text-slate-500 hover:text-white" title="Copy"><i class="fas fa-copy"></i></button>
+                    </div>
+                </div>`).join("") : `<p class="text-slate-500 text-sm">Nothing yet${q ? " matches" : ""}.</p>`;
+        }
+
+        // ---------------------------------------------------------------- panels
+        function showPanel(id) {
+            closePanels();
+            document.getElementById("overlay").classList.remove("hidden");
+            const p = document.getElementById(id);
+            p.classList.remove(id === "helper-panel" ? "translate-x-full" : "-translate-x-full");
+        }
+        function closePanels() {
+            document.getElementById("overlay").classList.add("hidden");
+            document.getElementById("helper-panel").classList.add("translate-x-full");
+            document.getElementById("cheatsheet-panel").classList.add("-translate-x-full");
+        }
+        function toggleCheatsheet() { renderCheatsheet(); showPanel("cheatsheet-panel"); }
+        document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePanels(); });
+
+        // ---------------------------------------------------------------- helper
+        const LADDER = ["Nudge", "Hint", "Bigger hint", "Walk-through"];
+
+        function openHelper() { renderHelper(); showPanel("helper-panel"); setTimeout(() => document.getElementById("helper-input").focus(), 300); }
+        function askAbout(id) {
+            helperContextId = id;
+            renderHelper(); showPanel("helper-panel");
+            const box = document.getElementById("helper-input");
+            if (!box.value.trim()) box.value = (state.help[id]?.count ? "I'm still stuck." : "I'm stuck on this one. Can I get a hint?");
+            setTimeout(() => box.focus(), 300);
+        }
+        function generalQuestion() { helperContextId = null; renderHelper(); document.getElementById("helper-input").focus(); }
+        function thread() {
+            if (!helperContextId) return state.general;
+            if (!state.help[helperContextId]) state.help[helperContextId] = { count: 0, history: [] };
+            return state.help[helperContextId];
+        }
+
+        function renderMarkdown(text) {
+            // Safe, small markdown: escape everything, then code fences, inline code, bold, lists, paragraphs.
+            const parts = String(text).split(/```/);
+            return parts.map((part, i) => {
+                if (i % 2 === 1) {
+                    const body = part.replace(/^[a-zA-Z0-9_-]*\n/, "").replace(/\n$/, "");
+                    return `<pre><button class="absolute top-1 right-2 text-slate-500 hover:text-white text-xs" onclick="copyToClipboard(this.nextElementSibling.textContent)"><i class="fas fa-copy"></i></button><code>${escapeHtml(body)}</code></pre>`;
+                }
+                const lines = escapeHtml(part).split("\n");
+                let html = "", list = null;
+                const inline = (s) => s.replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+                const close = () => { if (list) { html += `</${list}>`; list = null; } };
+                for (const line of lines) {
+                    const ul = line.match(/^\s*[-*] (.*)/), ol = line.match(/^\s*\d+[.)] (.*)/);
+                    if (ul || ol) {
+                        const tag = ul ? "ul" : "ol";
+                        if (list !== tag) { close(); html += `<${tag}>`; list = tag; }
+                        html += `<li>${inline((ul || ol)[1])}</li>`;
+                    } else { close(); if (line.trim()) html += `<p>${inline(line)}</p>`; }
+                }
+                close();
+                return html;
+            }).join("");
+        }
+
+        function renderHelper() {
+            const ex = helperContextId ? findExercise(helperContextId) : null;
+            const t = thread();
+            document.getElementById("helper-context").innerHTML = ex
+                ? `Helping with <strong class="text-slate-200">${escapeHtml(ex.label)}: ${escapeHtml(ex.les.title)}</strong> · <button class="underline hover:text-white" onclick="generalQuestion()">ask something general instead</button>`
+                : `General question. To get help with an exercise, press <strong>Ask the helper</strong> under it.`;
+            const ladder = document.getElementById("helper-ladder");
+            if (ex) {
+                const next = Math.min(t.count + 1, 4);
+                ladder.innerHTML = LADDER.map((name, i) => `<span class="px-2 py-0.5 rounded border ${i + 1 < next ? "border-slate-700 text-slate-500" : i + 1 === next ? "border-violet-400 text-violet-200 bg-violet-900/40" : "border-slate-800 text-slate-600"}">${i + 1}. ${name}</span>`).join("");
+            } else ladder.innerHTML = "";
+            const actions = document.getElementById("helper-actions");
+            actions.innerHTML = ex && t.count >= 2 && t.count < 4
+                ? `<button onclick="sendHelp(true)" class="text-xs mono border border-amber-500 text-amber-300 hover:bg-amber-600 hover:text-white px-2 py-1 rounded"><i class="fas fa-shoe-prints mr-1"></i>Just walk me through it</button>` : "";
+            if (t.history.length) actions.innerHTML += `<button onclick="clearThread()" class="text-xs mono border border-slate-600 text-slate-400 hover:text-white px-2 py-1 rounded"><i class="fas fa-eraser mr-1"></i>Clear this chat</button>`;
+
+            const log = document.getElementById("helper-log");
+            log.innerHTML = t.history.length ? t.history.map((m) => `
+                <div class="chat-msg text-sm rounded-lg p-3 ${m.role === "user" ? "bg-slate-700 ml-8" : "bg-slate-800 border border-slate-700 mr-4"}">${m.role === "user" ? escapeHtml(m.content).replace(/\n/g, "<br>") : renderMarkdown(m.content)}</div>`).join("")
+                : `<p class="text-slate-500 text-sm">${ex ? "Ask anything about this exercise. You'll get small hints first; ask again for more." : "Ask anything about terminals, Linux, WSL or Codex."}</p>`;
+            log.scrollTop = log.scrollHeight;
+        }
+        function clearThread() {
+            if (helperContextId) delete state.help[helperContextId]; else state.general = { history: [] };
+            saveState(); renderHelper(); renderCourse();
+        }
+
+        function buildContext(ex) {
+            const les = ex.les;
+            const data = ex.kind === "capstone" ? les : les.exercise;
+            const codes = (les.code || []).map((b) => `[${(WHERE[b.where] || WHERE.ubuntu).label}]\n${codeText(b)}`).join("\n\n");
+            return {
+                sectionTitle: ex.sec.title,
+                lessonTitle: ex.kind === "capstone" ? "Section task: " + les.title : les.title,
+                exerciseTitle: ex.label + ": " + les.title,
+                lessonText: (ex.kind === "capstone" ? stripHtml(ex.sec.intro) : stripHtml(les.explain)) + (codes ? "\n\nCommands shown:\n" + codes : ""),
+                exerciseText: stripHtml(data.task),
+                checkText: stripHtml(data.check),
+                solutionText: data.solution,
+            };
+        }
+
+        async function sendHelp(walkthrough = false) {
+            if (sending) return;
+            const box = document.getElementById("helper-input");
+            let message = box.value.trim();
+            if (!message && walkthrough) message = "Please just walk me through it step by step.";
+            if (!message) return;
+            const ex = helperContextId ? findExercise(helperContextId) : null;
+            const t = thread();
+            const payload = {
+                message,
+                history: t.history.filter((m) => !m.error).slice(-MAX_HISTORY).map(({ role, content }) => ({ role, content })),
+                context: ex ? buildContext(ex) : null,
+                attempt: ex ? t.count + 1 : 1,
+                walkthrough,
+            };
+            t.history.push({ role: "user", content: message });
+            box.value = "";
+            sending = true;
+            document.getElementById("helper-send").disabled = true;
+            renderHelper();
+            const log = document.getElementById("helper-log");
+            log.insertAdjacentHTML("beforeend", `<div id="thinking" class="text-sm text-slate-500 mono"><i class="fas fa-circle-notch fa-spin mr-2"></i>Thinking...</div>`);
+            log.scrollTop = log.scrollHeight;
+            let reply, failed = false;
+            try {
+                const res = await fetch("/api/help", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), credentials: "same-origin" });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.reply) {
+                    reply = data.reply;
+                    if (ex) t.count += 1;
+                } else {
+                    failed = true;
+                    reply = `⚠️ ${data.error || `The helper isn't answering right now (error ${res.status}).`}`;
+                }
+            } catch {
+                failed = true;
+                reply = "⚠️ Couldn't reach the helper. Check your internet connection and try again.";
+            }
+            t.history.push(failed ? { role: "assistant", content: reply, error: true } : { role: "assistant", content: reply });
+            t.history = t.history.slice(-30);
+            sending = false;
+            document.getElementById("helper-send").disabled = false;
+            saveState(); renderHelper(); renderCourse();
+        }
+        document.getElementById("helper-input").addEventListener("keydown", (e) => {
+            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendHelp(); }
+        });
+
+        // ---------------------------------------------------------------- start
+        renderCourse();
+        loadFiles();
+    </script>
+</body>
+</html>
