@@ -1,0 +1,14 @@
+Build "terminal-buddy" in this folder: a small chatbot web page that helps me learn the Linux terminal. Follow AGENTS.md.
+
+What it should do:
+- A single web page with a chat box. I type a question, it shows the answer. Code in answers should be shown as code blocks.
+- It remembers the conversation while the page is open (send the last 10 messages with each question).
+
+How to build it:
+- server.js: Node.js 22 with only built-in modules. Serves public/index.html and has POST /api/chat, which calls https://openrouter.ai/api/v1/chat/completions.
+- The key comes from the OPENROUTER_API_KEY environment variable. The model comes from BUDDY_MODEL, default anthropic/claude-haiku-5.5. Cap max_tokens at 600.
+- The bot's instructions live in prompt.md: a friendly tutor for a beginner using Ubuntu in WSL on Windows, who gives hints before full answers and always says which terminal to type a command in.
+- Dockerfile using node:22-alpine, and compose.yaml with one service that reads .env with env_file and publishes 127.0.0.1:3000:3000.
+- Add .env.example with OPENROUTER_API_KEY= and BUDDY_MODEL= (no real values).
+
+Don't touch .env. When the files are ready, tell me the command to start it and stop there.

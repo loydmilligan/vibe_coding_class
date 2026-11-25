@@ -4,9 +4,31 @@ services:
     container_name: vibe_course_web
     ports:
       - "2256:80"
+    depends_on:
+      - helper
     restart: unless-stopped
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
+
+  # Help bot for the Terminal Basecamp course (/terminal/). Not published on any
+  # host port: only nginx above can reach it, at /api/.
+  helper:
+    build: ./helper
+    container_name: vibe_course_helper
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - helper-data:/data
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  helper-data:

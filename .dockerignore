@@ -3,3 +3,6 @@
 scripts
 QUICKSTART.md
 claude.md
+.env
+helper
+docs
